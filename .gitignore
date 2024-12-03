@@ -1,0 +1,11 @@
+build/
+.vscode/
+.cache/
+pa4.tar.gz
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake
+events.log
+pa4/pa4
+pipes.log
