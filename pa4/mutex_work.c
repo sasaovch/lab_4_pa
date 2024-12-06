@@ -5,6 +5,7 @@
 #include "pipes_const.h"
 #include "time_work.h"
 #include "banking.h"
+#include <stdio.h>
 
 int request_cs(const void *self) {
     Info* pipe_info = (Info *) self;
@@ -25,12 +26,14 @@ int request_cs(const void *self) {
     request_msg.s_header.s_local_time = get_lamport_time();
     request_msg.s_header.s_payload_len = 0;
 
+    timestamp_t timestamp = get_lamport_time();
+
 
     send_multicast(pipe_info, &request_msg);
 
     int replies_left = N - 2;
     while (1) {
-        if (replies_left == 0 && peek().pipe_id == pipe_id) {
+        if (replies_left <= 0 && peek().pipe_id == pipe_id) {
             break;
         }
 
@@ -47,30 +50,44 @@ int request_cs(const void *self) {
                 break;
 
             case CS_REQUEST:
+                replies_left--;
                 received_element.pipe_id = from_id;
                 received_element.timestamp = received_msg.s_header.s_local_time;
          
                 push(received_element);
 
-                Message reply_msg;
-                pipe_info->local_time++;
+                // fprintf(stdout, "%d pipe %d\n", pipe_id, timestamp);
+                // fflush(stdout);
 
-                reply_msg.s_header.s_magic = MESSAGE_MAGIC;
-                reply_msg.s_header.s_payload_len = 0;
-                reply_msg.s_header.s_type = CS_REPLY;
-                reply_msg.s_header.s_local_time = get_lamport_time();                      
-                send(pipe_info, from_id, &reply_msg);
+                // fprintf(stdout, "%d recieve %d\n", received_element.pipe_id, received_element.timestamp);
+                // fflush(stdout);
+
+                // fprintf(stdout, "%d pipe %d - %d request %d - %d recieve %d\n", pipe_id, timestamp, peek().pipe_id, peek().timestamp, received_element.pipe_id, received_element.timestamp);
+                // fflush(stdout);
+
+                if (peek().pipe_id != pipe_id) {
+                    Message reply_msg;
+                    pipe_info->local_time++;
+
+                    reply_msg.s_header.s_magic = MESSAGE_MAGIC;
+                    reply_msg.s_header.s_payload_len = 0;
+                    reply_msg.s_header.s_type = CS_REPLY;
+                    reply_msg.s_header.s_local_time = get_lamport_time();                      
+                    send(pipe_info, from_id, &reply_msg);
+                }
+
                 break;
 
-            case CS_RELEASE:               
+            case CS_RELEASE:  
+                replies_left--;             
                 pop();
                 break;
 
             case DONE:
                 pipe_info->received_done_msg++;
                 break;
-            }
         }
+    }
     return 0;
 }
 

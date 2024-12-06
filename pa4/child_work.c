@@ -114,12 +114,13 @@ int handle_transfers(void* __child_state) {
 
     int messages_number = child_id * 5;
   
-    if (is_mutexl) {
-        request_cs(&pipe_info);        
-    }
   
 
     for (int i = 1; i <= messages_number; i++) {
+        if (is_mutexl) {
+            request_cs(&pipe_info);        
+        }
+
         char str[128];
         memset(str, 0, sizeof(str));
         sprintf(str, log_loop_operation_fmt, child_id, i, messages_number);
@@ -128,14 +129,14 @@ int handle_transfers(void* __child_state) {
         fprintf(elf, log_loop_operation_fmt, child_id, i, messages_number);
         fflush(elf);
 
-        fprintf(stdout, log_loop_operation_fmt, child_id, i, messages_number);
-        fflush(stdout);
+        // fprintf(stdout, log_loop_operation_fmt, child_id, i, messages_number);
+        // fflush(stdout);
 
+        if (is_mutexl) {
+            release_cs(&pipe_info);
+        }
     }
   
-    if (is_mutexl) {
-        release_cs(&pipe_info);
-    }
 
     int wait_for_others_to_stop = N - 2 - pipe_info.received_done_msg;
 
